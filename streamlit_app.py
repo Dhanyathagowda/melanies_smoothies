@@ -17,16 +17,16 @@ st.write("The name on your Smoothie will be:", name_on_order)
 cnx = st.connection("snowflake")
 session = cnx.session()
 
-# Get fruit list from Snowflake
-# Renamed from my_dataframe to fruit_options_df for clarity
+# Get fruit list from Snowflake, now including the SEARCH_ON column
+# We will convert it to a pandas dataframe right away
 fruit_options_df = (
     session.table("smoothies.public.fruit_options")
-    .select(col("FRUIT_NAME"))
+    .select(col("FRUIT_NAME"), col('SEARCH_ON'))
     .to_pandas()
 )
 
 # Multiselect up to 5 fruits
-# Changed to use the DataFrame directly for display in multiselect, similar to the screenshot
+# The options are still from the FRUIT_NAME column for user friendliness
 ingredients_list = st.multiselect(
     "Choose up to 5 ingredients:",
     fruit_options_df["FRUIT_NAME"].tolist(), # Provide the list of fruit names
@@ -62,7 +62,13 @@ if ingredients_list:
     ingredients_string = ''
     
     for fruit_chosen in ingredients_list:
-        ingredients_string += fruit_chosen + ' '
-        st.subheader(fruit_chosen + 'Nutrition Information')
-        smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/" + fruit_chosen)
-        sf_df=st.dataframe(data=smoothiefroot_response.json(),use_container_width=True)
+        # Get the search value from the DataFrame using loc
+        search_on = fruit_options_df.loc[fruit_options_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
+        
+        # Display the search value for debugging (as shown in the screenshots)
+        st.write("The search value for", fruit_chosen, "is", search_on)
+
+        # Use the search_on value to get the fruit data from the API
+        st.subheader(fruit_chosen + ' Nutrition Information')
+        smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/" + search_on)
+        sf_df = st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
