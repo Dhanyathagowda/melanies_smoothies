@@ -53,3 +53,15 @@ if ingredients_list:
 
         # Display nutrition data in a dataframe
         st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
+
+        # Add fruit to ingredients string
+        ingredients_string += fruit_chosen + " "
+
+    # ✅ Submit button (make sure this is OUTSIDE the for-loop)
+    if st.button("Submit Order"):
+        insert_stmt = f"""
+            INSERT INTO smoothies.public.orders (ingredients, name_on_order)
+            VALUES ('{ingredients_string.strip()}', '{name_on_order}')
+        """
+        session.sql(insert_stmt).collect()
+        st.success("✅ Your order has been submitted!")
