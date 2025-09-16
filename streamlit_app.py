@@ -2,7 +2,7 @@
 import streamlit as st
 from snowflake.snowpark.context import get_active_session
 from snowflake.snowpark.functions import col
-import pandas as pd   # ✅ added pandas
+import pandas as pd
 import requests
 
 # Write directly to the app
@@ -33,11 +33,14 @@ ingredients_list = st.multiselect(
     max_selections=5
 )
 
+# New: Add a checkbox for the order status
+order_filled = st.checkbox("Mark order as filled?")
+
 if ingredients_list:
     ingredients_string = ""
 
     for fruit_chosen in ingredients_list:
-        # ✅ Get the SEARCH_ON value for the chosen fruit
+        # Get the SEARCH_ON value for the chosen fruit
         search_on = pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
 
         # Show sentence: "The search value for Apples is Apple ."
@@ -55,13 +58,18 @@ if ingredients_list:
         st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
 
         # Add fruit to ingredients string
-        ingredients_string += fruit_chosen + " "
+        ingredients_string += fruit_chosen + ", "
 
-    # ✅ Submit button (make sure this is OUTSIDE the for-loop)
+    # Submit button (make sure this is OUTSIDE the for-loop)
     if st.button("Submit Order"):
+        # Correctly format the ingredients string to remove trailing comma
+        ingredients_string = ingredients_string.strip().rstrip(',')
+
+        # New: Add order_filled to the INSERT statement
         insert_stmt = f"""
-            INSERT INTO smoothies.public.orders (ingredients, name_on_order)
-            VALUES ('{ingredients_string.strip()}', '{name_on_order}')
+            INSERT INTO smoothies.public.orders (ingredients, name_on_order, order_filled)
+            VALUES ('{ingredients_string}', '{name_on_order}', {order_filled})
         """
+        
         session.sql(insert_stmt).collect()
         st.success("✅ Your order has been submitted!")
